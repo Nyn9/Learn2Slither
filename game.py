@@ -3,154 +3,198 @@ import random
 import pygame
 
 
-size = 10
-scale = 90
-board = np.zeros((size, size))
-snake = []
 
 
-def valid_cell(x, y):
-    if x < 0 or x >= size or y < 0 or y >= size:
-        return False
-    if board[x][y] != 0:
-        return False
-    return True
+class Env:
+    def __init__(self):
+        self.size = 10
+        self.scale = 90
+        self.board = np.zeros((self.size, self.size))
+        self.snake = []
+        self.init_game()
+        self.state = self.snake[0]
+        return self.state
 
 
-def generate_body(x, y):
-    next_cell = random.choice([-1, 1])
-    dir_cell = random.choice([0, 1])
-    if dir_cell == 0:
-        x += next_cell
-    else:
-        y += next_cell
-    return x, y
+    def reset(self):
+        self.board = np.zeros((self.size, self.size))
+        self.snake = []
+        self.init_game()
+        self.state = self.snake[0]
+        return self.state
 
 
-def generate_snake():
-    x = random.randint(0, 9)
-    y = random.randint(0, 9)
-    snake.append((x, y))
-    board[x][y] = 1
-    for _ in range(2):
-        tmp_x, tmp_y = generate_body(x, y)
-        while not valid_cell(tmp_x, tmp_y):
-            tmp_x, tmp_y = generate_body(x, y)
-        x, y = tmp_x, tmp_y
-        board[x][y] = 2
-        snake.append((x, y))
+    def move(self, dx, dy):
+        x, y = self.snake[0]
+        new_x = x + dx
+        new_y = y + dy
+        self.snake[0] = (new_x, new_y)
+        for i in range(1, len(self.snake)):
+            tmp_x, tmp_y = self.snake[i]
+            self.snake[i] = (x, y)
+            x, y = tmp_x, tmp_y
+
+        if new_x < 0 or new_x >= self.size or new_y < 0 or new_y >= self.size:
+            print("Game Over!")
+            self.reward = -100
+            self.done = True
+
+        self.board[x][y] = 0
+        if self.board[new_x][new_y] == 3:
+            self.snake.append((x, y))
+            self.board[x][y] = 2
+            self.generate_apple(3)
+            self.reward = 10
+        elif self.board[new_x][new_y] == 4:
+            rm_x, rm_y = self.snake[len(self.snake) - 1]
+            self.snake.remove((rm_x, rm_y))
+            self.board[rm_x][rm_y] = 0
+            self.generate_apple(4)
+            self.reward = -10
+
+        if self.check_game_over(new_x, new_y):
+            print("Game Over!")
+            self.reward = -100
+            self.done = True
 
 
-def generate_apple(type):
-    x = random.randint(0, 9)
-    y = random.randint(0, 9)
-    while not valid_cell(x, y):
+    def step(self, action):
+        self.reward = 0
+        self.done = False
+        if action == 0:
+            self.move(0, -1)
+        elif action == 1:
+            self.move(0, 1)
+        elif action == 2:
+            self.move(-1, 0)
+        elif action == 3:
+            self.move(1, 0)
+        self.state = self.snake[0]
+        self.draw_board()
+        return self.state, self.reward, self.done
+
+
+    def valid_cell(self, x, y):
+        if x < 0 or x >= self.size or y < 0 or y >= self.size:
+            return False
+        if self.board[x][y] != 0:
+            return False
+        return True
+
+
+    def generate_body(self, x, y):
+        next_cell = random.choice([-1, 1])
+        dir_cell = random.choice([0, 1])
+        if dir_cell == 0:
+            x += next_cell
+        else:
+            y += next_cell
+        return x, y
+
+
+    def generate_snake(self):
         x = random.randint(0, 9)
         y = random.randint(0, 9)
-    board[x][y] = type
+        self.snake.append((x, y))
+        self.board[x][y] = 1
+        for _ in range(2):
+            tmp_x, tmp_y = self.generate_body(x, y)
+            while not self.valid_cell(tmp_x, tmp_y):
+                tmp_x, tmp_y = self.generate_body(x, y)
+            x, y = tmp_x, tmp_y
+            self.board[x][y] = 2
+            self.snake.append((x, y))
 
 
-def init_game():
-    pygame.init()
-    screen = pygame.display.set_mode((size*scale, size*scale))
-    generate_snake()
-    generate_apple(3)
-    generate_apple(3)
-    generate_apple(4)
-    return screen
+    def generate_apple(self, type):
+        x = random.randint(0, 9)
+        y = random.randint(0, 9)
+        while not self.valid_cell(x, y):
+            x = random.randint(0, 9)
+            y = random.randint(0, 9)
+        self.board[x][y] = type
 
 
-def draw_board(screen):
-    for s in snake:
-        board[s[0]][s[1]] = 2
-        if s == snake[0]:
-            board[s[0]][s[1]] = 1
-    colors = np.zeros((size, size, 3), dtype=int)
-    colors[board == 0] = [120, 180, 0]
-    colors[board == 1] = [40, 0, 100]
-    colors[board == 2] = [0, 50, 250]
-    colors[board == 3] = [0, 255, 0]
-    colors[board == 4] = [250, 0, 0]
-
-    surface = pygame.surfarray.make_surface(colors)
-    surface = pygame.transform.scale(surface, (size*scale, size*scale))
-    screen.blit(surface, (0, 0))
-
-    for i in range(size + 1):
-        pygame.draw.line(screen, (0, 0, 0), (i*scale, 0),
-                         (i*scale, size*scale))
-        pygame.draw.line(screen, (0, 0, 0), (0, i*scale),
-                         (size*scale, i*scale))
-
-    pygame.display.flip()
+    def init_game(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((self.size*self.scale, self.size*self.scale))
+        self.generate_snake()
+        self.generate_apple(3)
+        self.generate_apple(3)
+        self.generate_apple(4)
 
 
-def check_game_over(x, y):
-    if len(snake) == 0:
-        return True
-    if x < 0 or x >= size or y < 0 or y >= size:
-        return True
-    if board[x][y] == 2:
-        return True
-    return False
+    def draw_board(self):
+        for s in self.snake:
+            self.board[s[0]][s[1]] = 2
+            if s == self.snake[0]:
+                self.board[s[0]][s[1]] = 1
+        colors = np.zeros((self.size, self.size, 3), dtype=int)
+        colors[self.board == 0] = [120, 180, 0]
+        colors[self.board == 1] = [40, 0, 100]
+        colors[self.board == 2] = [0, 50, 250]
+        colors[self.board == 3] = [0, 255, 0]
+        colors[self.board == 4] = [250, 0, 0]
+
+        surface = pygame.surfarray.make_surface(colors)
+        surface = pygame.transform.scale(surface, (self.size*self.scale, self.size*self.scale))
+        self.screen.blit(surface, (0, 0))
+        for i in range(self.size + 1):
+            pygame.draw.line(self.screen, (0, 0, 0), (i*self.scale, 0),
+                            (i*self.scale, self.size*self.scale))
+            pygame.draw.line(self.screen, (0, 0, 0), (0, i*self.scale),
+                            (self.size*self.scale, i*self.scale))
+
+        pygame.display.flip()
 
 
-def move(dx, dy):
-    x, y = snake[0]
-    new_x = x + dx
-    new_y = y + dy
-    snake[0] = (new_x, new_y)
-    for i in range(1, len(snake)):
-        tmp_x, tmp_y = snake[i]
-        snake[i] = (x, y)
-        x, y = tmp_x, tmp_y
-
-    if new_x < 0 or new_x >= size or new_y < 0 or new_y >= size:
-        print("Game Over!")
-        pygame.quit()
-        exit()
-
-    board[x][y] = 0
-    if board[new_x][new_y] == 3:
-        snake.append((x, y))
-        board[x][y] = 2
-        generate_apple(3)
-    elif board[new_x][new_y] == 4:
-        rm_x, rm_y = snake[len(snake) - 1]
-        snake.remove((rm_x, rm_y))
-        board[rm_x][rm_y] = 0
-        generate_apple(4)
-
-    if check_game_over(new_x, new_y):
-        print("Game Over!")
-        pygame.quit()
-        exit()
+    def check_game_over(self, x, y):
+        if len(self.snake) == 0:
+            return True
+        if x < 0 or x >= self.size or y < 0 or y >= self.size:
+            return True
+        if self.board[x][y] == 2:
+            return True
+        return False
 
 
-def game_loop(screen):
-    running = True
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    running = False
-                if event.key == pygame.K_w:
-                    move(0, -1)
-                if event.key == pygame.K_s:
-                    move(0, 1)
-                if event.key == pygame.K_a:
-                    move(-1, 0)
-                if event.key == pygame.K_d:
-                    move(1, 0)
-        draw_board(screen)
-    pygame.quit()
+class Agent:
+    def __init__(self, learning_rate=0.1, discount_factor=0.9, exploration_rate=1.0,):
+        self.q_table = np.zeros((4, 4, 4))
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
+        self.exploration_rate = exploration_rate
+
+    def choose_action(self, state):
+        if random.uniform(0, 1) < self.exploration_rate:
+            return random.randint(0, 3)
+        else:
+            return np.argmax(self.q_table[state])
+
+    def update_q_value(self, state, action, reward, next_state):
+        max_future_q = np.max(self.q_table[next_state])
+        cur_q = self.q_table[state][action]
+        self.q_table[state][action] = cur_q + self.learning_rate * (
+            reward + self.discount_factor * max_future_q - cur_q
+        )
 
 
 def main():
-    screen = init_game()
-    game_loop(screen)
+    env = Env()
+    agent = Agent()
+    epochs = 1000
+
+    for epoch in range(epochs):
+        state = env.reset()
+        done = False
+
+        while not done:
+            action = agent.choose_action(state)
+            next_state, reward, done = env.step(action)
+            agent.update_q_value(state, action, reward, next_state)
+            state = next_state
+
+        print(f"Epoch: {epoch+1}, Total Reward: {total_reward}")
 
 
 if __name__ == "__main__":
