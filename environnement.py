@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 import random
+from time import sleep
 
 
 class Env:
@@ -10,57 +11,73 @@ class Env:
             pygame.init()
         self.size = 10
         self.scale = 90
-        self.board = np.zeros((self.size, self.size))
-        self.snake = []
         self.init_game()
         if self.render:
             self.draw_board()
         self.state = self.get_state()
 
     def reset(self):
-        self.board = np.zeros((self.size, self.size))
-        self.snake = []
+        print("=========")
         self.init_game()
-        self.reward = 0
         if self.render:
             self.draw_board()
         self.state = self.get_state()
         return self.state
 
     def move(self, dx, dy):
+        print(f"Move: dx={dx}, dy={dy}")
         x, y = self.snake[0]
         new_x = x + dx
         new_y = y + dy
         if new_x < 0 or new_x >= self.size or new_y < 0 or new_y >= self.size:
             print("Game Over!")
-            self.reward -= 20
+            self.reward -= 200
             self.done = True
             return
 
+        print(self.board)
+        print(self.snake)
+
+        for j in range(10):
+            for i in range(10):
+                print(f"x : {i} / y : {j} : {self.board[j][i]} ")
+
+        for i in range(len(self.snake)):
+            tmp_x, tmp_y = self.snake[i]
+            self.board[tmp_y][tmp_x] = 0
+
         self.snake[0] = (new_x, new_y)
+        self.board[new_y][new_x] = 1
+        print(f"Snake head : {self.snake[0]}")
+        x, y = new_x, new_y
         for i in range(1, len(self.snake)):
             tmp_x, tmp_y = self.snake[i]
             self.snake[i] = (x, y)
+            print(f"Snake body {i} : {self.snake[i]}")
+            self.board[y][x] = 2
             x, y = tmp_x, tmp_y
 
-        self.board[x][y] = 0
-        if self.board[new_x][new_y] == 3:
+        print("After moving:")
+        print(self.snake)
+
+        self.board[y][x] = 0
+        if self.board[new_y][new_x] == 3:
             self.snake.append((x, y))
-            self.board[x][y] = 2
+            self.board[y][x] = 2
             self.generate_apple(3)
-            self.reward += 10
-        elif self.board[new_x][new_y] == 4:
+            self.reward += 100
+        elif self.board[new_y][new_x] == 4:
             rm_x, rm_y = self.snake[len(self.snake) - 1]
             self.snake.remove((rm_x, rm_y))
-            self.board[rm_x][rm_y] = 0
+            self.board[rm_y][rm_x] = 0
             self.generate_apple(4)
+            self.reward -= 100
+        elif self.board[new_y][new_x] == 0:
             self.reward -= 10
-        elif self.board[new_x][new_y] == 0:
-            self.reward -= 0.1
 
         if self.check_game_over(new_x, new_y):
             print("Game Over!")
-            self.reward -= 20
+            self.reward -= 200
             self.done = True
             return
 
@@ -82,10 +99,16 @@ class Env:
 
     def get_state(self):
         x, y = self.snake[0]
-        state = np.zeros(20)
+        print(f"Snake Head Position: ({x}, {y})")
+        state = np.zeros((10, 10))
         for i in range(10):
-            state[i] = self.board[y][i]
-            state[i + 10] = self.board[i][x]
+            state[y][i] = self.board[y][i]
+            state[i][x] = self.board[i][x]
+
+        print("Board State:")
+        print(self.board)
+        print("Current State:")
+        print(state)
 
         return state
 
@@ -117,6 +140,11 @@ class Env:
             x, y = tmp_x, tmp_y
             self.board[x][y] = 2
             self.snake.append((x, y))
+        print("Initial Snake Position:")
+        print(f"Snake head : {self.snake[0]}")
+        for i in range(1, len(self.snake)):
+            print(f"Snake body {i} : {self.snake[i]}")
+        print("------")
 
     def generate_apple(self, type):
         x = random.randint(0, 9)
@@ -127,6 +155,9 @@ class Env:
         self.board[x][y] = type
 
     def init_game(self):
+        self.board = np.zeros((self.size, self.size))
+        self.snake = []
+        self.reward = 0
         if self.render:
             self.screen = pygame.display.set_mode((self.size*self.scale,
                                                    self.size*self.scale))
