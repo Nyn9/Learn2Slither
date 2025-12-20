@@ -2,6 +2,7 @@ import pygame
 import numpy as np
 import random
 from time import sleep
+import sys
 
 
 class Env:
@@ -24,65 +25,49 @@ class Env:
         self.state = self.get_state()
         return self.state
 
+
     def move(self, dx, dy):
-        print(f"Move: dx={dx}, dy={dy}")
         x, y = self.snake[0]
         new_x = x + dx
         new_y = y + dy
-        if new_x < 0 or new_x >= self.size or new_y < 0 or new_y >= self.size:
+        if self.check_game_over(new_x, new_y):
             print("Game Over!")
-            self.reward -= 200
+            self.reward = -20
             self.done = True
             return
-
-        print(self.board)
-        print(self.snake)
-
-        for j in range(10):
-            for i in range(10):
-                print(f"x : {i} / y : {j} : {self.board[j][i]} ")
 
         for i in range(len(self.snake)):
             tmp_x, tmp_y = self.snake[i]
             self.board[tmp_y][tmp_x] = 0
 
         self.snake[0] = (new_x, new_y)
-        self.board[new_y][new_x] = 1
-        print(f"Snake head : {self.snake[0]}")
-        x, y = new_x, new_y
         for i in range(1, len(self.snake)):
             tmp_x, tmp_y = self.snake[i]
             self.snake[i] = (x, y)
-            print(f"Snake body {i} : {self.snake[i]}")
             self.board[y][x] = 2
             x, y = tmp_x, tmp_y
-
-        print("After moving:")
-        print(self.snake)
 
         self.board[y][x] = 0
         if self.board[new_y][new_x] == 3:
             self.snake.append((x, y))
             self.board[y][x] = 2
             self.generate_apple(3)
-            self.reward += 100
+            self.reward = 10
         elif self.board[new_y][new_x] == 4:
             rm_x, rm_y = self.snake[len(self.snake) - 1]
             self.snake.remove((rm_x, rm_y))
             self.board[rm_y][rm_x] = 0
             self.generate_apple(4)
-            self.reward -= 100
+            self.reward = -10
         elif self.board[new_y][new_x] == 0:
-            self.reward -= 10
+            self.reward = -0.01
 
-        if self.check_game_over(new_x, new_y):
-            print("Game Over!")
-            self.reward -= 200
-            self.done = True
-            return
+        self.board[new_y][new_x] = 1
+
 
     def step(self, action):
         self.done = False
+        self.reward = 0
         if action == 0:
             self.move(0, -1)
         elif action == 1:
@@ -91,6 +76,7 @@ class Env:
             self.move(-1, 0)
         elif action == 3:
             self.move(1, 0)
+        self.steps += 1
         if len(self.snake) != 0:
             self.state = self.get_state()
             if self.render:
@@ -99,23 +85,85 @@ class Env:
 
     def get_state(self):
         x, y = self.snake[0]
-        print(f"Snake Head Position: ({x}, {y})")
-        state = np.zeros((10, 10))
-        for i in range(10):
-            state[y][i] = self.board[y][i]
-            state[i][x] = self.board[i][x]
 
-        print("Board State:")
-        print(self.board)
-        print("Current State:")
-        print(state)
+        # ordre : up, down, left, right
+        obs = [0, 0, 0, 0]
+        green = [0, 0, 0, 0]
+        red = [0, 0, 0, 0]
+
+        # UP
+        for d in range(1, y + 1):
+            cell = self.board[y - d][x]
+            if cell == 2:  # corps
+                obs[0] = 1 / d
+                break
+            if cell == 3:
+                green[0] = 1 / d
+                break
+            if cell == 4:
+                red[0] = 1 / d
+                break
+        else:
+            obs[0] = 1 / (y + 1)  # mur
+
+        # DOWN
+        for d in range(1, self.size - y):
+            cell = self.board[y + d][x]
+            if cell == 2:
+                obs[1] = 1 / d
+                break
+            if cell == 3:
+                green[1] = 1 / d
+                break
+            if cell == 4:
+                red[1] = 1 / d
+                break
+        else:
+            obs[1] = 1 / (self.size - y)
+
+        # LEFT
+        for d in range(1, x + 1):
+            cell = self.board[y][x - d]
+            if cell == 2:
+                obs[2] = 1 / d
+                break
+            if cell == 3:
+                green[2] = 1 / d
+                break
+            if cell == 4:
+                red[2] = 1 / d
+                break
+        else:
+            obs[2] = 1 / (x + 1)
+
+        # RIGHT
+        for d in range(1, self.size - x):
+            cell = self.board[y][x + d]
+            if cell == 2:
+                obs[3] = 1 / d
+                break
+            if cell == 3:
+                green[3] = 1 / d
+                break
+            if cell == 4:
+                red[3] = 1 / d
+                break
+        else:
+            obs[3] = 1 / (self.size - x)
+
+        state = np.array([
+            obs[0], obs[1], obs[2], obs[3],
+            green[0], green[1], green[2], green[3],
+            red[0], red[1], red[2], red[3]
+        ], dtype=np.float32)
 
         return state
+
 
     def valid_cell(self, x, y):
         if x < 0 or x >= self.size or y < 0 or y >= self.size:
             return False
-        if self.board[x][y] != 0:
+        if self.board[y][x] != 0:
             return False
         return True
 
@@ -132,19 +180,14 @@ class Env:
         x = random.randint(0, 9)
         y = random.randint(0, 9)
         self.snake.append((x, y))
-        self.board[x][y] = 1
+        self.board[y][x] = 1
         for _ in range(2):
             tmp_x, tmp_y = self.generate_body(x, y)
             while not self.valid_cell(tmp_x, tmp_y):
                 tmp_x, tmp_y = self.generate_body(x, y)
             x, y = tmp_x, tmp_y
-            self.board[x][y] = 2
+            self.board[y][x] = 2
             self.snake.append((x, y))
-        print("Initial Snake Position:")
-        print(f"Snake head : {self.snake[0]}")
-        for i in range(1, len(self.snake)):
-            print(f"Snake body {i} : {self.snake[i]}")
-        print("------")
 
     def generate_apple(self, type):
         x = random.randint(0, 9)
@@ -152,12 +195,13 @@ class Env:
         while not self.valid_cell(x, y):
             x = random.randint(0, 9)
             y = random.randint(0, 9)
-        self.board[x][y] = type
+        self.board[y][x] = type
 
     def init_game(self):
         self.board = np.zeros((self.size, self.size))
         self.snake = []
         self.reward = 0
+        self.steps = 0
         if self.render:
             self.screen = pygame.display.set_mode((self.size*self.scale,
                                                    self.size*self.scale))
@@ -169,17 +213,18 @@ class Env:
 
     def draw_board(self):
         for s in self.snake:
-            self.board[s[0]][s[1]] = 2
+            self.board[s[1]][s[0]] = 2
             if s == self.snake[0]:
-                self.board[s[0]][s[1]] = 1
-        colors = np.zeros((self.size, self.size, 3), dtype=int)
+                self.board[s[1]][s[0]] = 1
+
+        colors = np.zeros((self.size, self.size, 3), dtype=np.uint8)
         colors[self.board == 0] = [120, 180, 0]
         colors[self.board == 1] = [40, 0, 100]
         colors[self.board == 2] = [0, 50, 250]
         colors[self.board == 3] = [0, 255, 0]
         colors[self.board == 4] = [250, 0, 0]
 
-        surface = pygame.surfarray.make_surface(colors)
+        surface = pygame.surfarray.make_surface(colors.swapaxes(0, 1))
         surface = pygame.transform.scale(surface, (self.size*self.scale,
                                                    self.size*self.scale))
         self.screen.blit(surface, (0, 0))
@@ -194,8 +239,10 @@ class Env:
     def check_game_over(self, x, y):
         if len(self.snake) == 0:
             return True
+        if len(self.snake) == 1 and self.board[y][x] == 2:
+            return True
         if x < 0 or x >= self.size or y < 0 or y >= self.size:
             return True
-        if self.board[x][y] == 2:
+        if self.board[y][x] == 2:
             return True
         return False

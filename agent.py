@@ -6,7 +6,7 @@ from tensorflow.keras.optimizers import Adam
 
 
 class Agent:
-    def __init__(self, state_size, lr=0.001, gamma=0.9, epsilon=1.0):
+    def __init__(self, state_size, lr=0.01, gamma=0.9, epsilon=1.0):
         self.lr = lr
         self.gamma = gamma
         self.epsilon = epsilon
