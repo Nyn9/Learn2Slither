@@ -14,7 +14,7 @@ def set_args() :
     parser.add_argument("-s", "--save", type=str, default="session", help="Save the training session.")
     parser.add_argument("-l", "--load", type=str, help="Load a training session.")
     parser.add_argument("-g", "--graph", action="store_true", help="Show training graphs.")
-    parser.add_argument("-sg", "--save_graph", action="store_true", help="Save training graphs.")
+    parser.add_argument("-sg", "--save_graph", type=str, help="Save training graphs.")
     parser.add_argument("-ns", "--no_state", action="store_true", help="Do not show the detailed information.")
     parser.add_argument("-nl", "--no_learn", action="store_true", help="Disable learning.")
     #TODO: Change speed of the game
@@ -29,7 +29,10 @@ def main():
         sys.exit(1)
     env = Env(args.render)
     state_size = 12
-    agent = Agent(state_size)
+    eps = 1.0
+    if args.load:
+        eps = 0.01
+    agent = Agent(state_size, 0.01, 0.9, eps)
     batch_size = 32
     epochs = args.epochs
     steps = []
@@ -74,7 +77,8 @@ def main():
                         ax2.set_ylabel('Snake Size')
                         plt.pause(0.01)
                         if args.save_graph:
-                            plt.savefig("training_progress.png")
+                            name = args.save_graph + ".png"
+                            plt.savefig(name)
                     print("episode: {}/{}, score: {}, size: {},"
                         " e: {:.2}".format(epoch+1, epochs, reward_per_epoch, len(env.snake), agent.epsilon))
         if args.save:
