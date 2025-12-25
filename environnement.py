@@ -18,13 +18,18 @@ class Env:
         self.state = self.get_state()
 
     def reset(self):
-        print("=========")
         self.init_game()
         if self.render:
             self.draw_board()
         self.state = self.get_state()
         return self.state
 
+
+    def set_snake(self):
+        for s in self.snake:
+            self.board[s[1]][s[0]] = 2
+            if s == self.snake[0]:
+                self.board[s[1]][s[0]] = 1
 
     def move(self, dx, dy):
         x, y = self.snake[0]
@@ -62,7 +67,38 @@ class Env:
         elif self.board[new_y][new_x] == 0:
             self.reward = -0.01
 
-        self.board[new_y][new_x] = 1
+        self.set_snake()
+
+
+    def good_character(self, n):
+        if n == 0:
+            return "0"
+        elif n == 1:
+            return "H"
+        elif n == 2:
+            return "S"
+        elif n == 3:
+            return "G"
+        elif n == 4:
+            return "R"
+        return "?"
+
+
+    def print_state(self):
+        x, y = self.snake[0]
+        start_space = " " * (x + 1)
+        end_space = " " * (self.size - x - 1)
+        print("=" * (self.size + 2))
+        print(start_space + "W" + end_space, flush=True)
+        for i in range(self.size):
+            if i != y:
+                print(start_space + self.good_character(self.board[i][x]) + end_space, flush=True)
+                continue
+            print("W", end="")
+            for j in range(self.size):
+                print(self.good_character(self.board[i][j]), end="")
+            print("W", flush=True)
+        print(start_space + "W" + end_space, flush=True)
 
 
     def step(self, action):
@@ -77,7 +113,7 @@ class Env:
         elif action == 3:
             self.move(1, 0)
         self.steps += 1
-        if len(self.snake) != 0:
+        if not self.done:
             self.state = self.get_state()
             if self.render:
                 self.draw_board()
@@ -86,15 +122,13 @@ class Env:
     def get_state(self):
         x, y = self.snake[0]
 
-        # ordre : up, down, left, right
         obs = [0, 0, 0, 0]
         green = [0, 0, 0, 0]
         red = [0, 0, 0, 0]
 
-        # UP
         for d in range(1, y + 1):
             cell = self.board[y - d][x]
-            if cell == 2:  # corps
+            if cell == 2:
                 obs[0] = 1 / d
                 break
             if cell == 3:
@@ -104,9 +138,8 @@ class Env:
                 red[0] = 1 / d
                 break
         else:
-            obs[0] = 1 / (y + 1)  # mur
+            obs[0] = 1 / (y + 1)
 
-        # DOWN
         for d in range(1, self.size - y):
             cell = self.board[y + d][x]
             if cell == 2:
@@ -121,7 +154,6 @@ class Env:
         else:
             obs[1] = 1 / (self.size - y)
 
-        # LEFT
         for d in range(1, x + 1):
             cell = self.board[y][x - d]
             if cell == 2:
@@ -136,7 +168,6 @@ class Env:
         else:
             obs[2] = 1 / (x + 1)
 
-        # RIGHT
         for d in range(1, self.size - x):
             cell = self.board[y][x + d]
             if cell == 2:
@@ -212,11 +243,6 @@ class Env:
         self.generate_apple(4)
 
     def draw_board(self):
-        for s in self.snake:
-            self.board[s[1]][s[0]] = 2
-            if s == self.snake[0]:
-                self.board[s[1]][s[0]] = 1
-
         colors = np.zeros((self.size, self.size, 3), dtype=np.uint8)
         colors[self.board == 0] = [120, 180, 0]
         colors[self.board == 1] = [40, 0, 100]

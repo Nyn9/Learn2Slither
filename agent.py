@@ -25,8 +25,6 @@ class Agent:
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
-        if len(self.memory) > 2000:
-            self.memory.pop(0)
 
     def choose_action(self, state):
         if np.random.rand() < self.epsilon:
