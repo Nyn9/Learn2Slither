@@ -8,17 +8,29 @@ import sys
 
 parser = argparse.ArgumentParser(description="SnAIke Game")
 
-def set_args() :
-    parser.add_argument("-r", "--render", action="store_true", help="Show the game window.")
-    parser.add_argument("-e", "--epochs", type=int, default=100, help="Number of epochs for training (default: 100).")
-    parser.add_argument("-s", "--save", type=str, default="session", help="Save the training session.")
-    parser.add_argument("-l", "--load", type=str, help="Load a training session.")
-    parser.add_argument("-g", "--graph", action="store_true", help="Show training graphs.")
-    parser.add_argument("-sg", "--save_graph", type=str, help="Save training graphs.")
-    parser.add_argument("-ns", "--no_state", action="store_true", help="Do not show the detailed information.")
-    parser.add_argument("-nl", "--no_learn", action="store_true", help="Disable learning.")
-    #TODO: Change speed of the game
-    #TODO: Step-by-step mode
+
+def set_args():
+    parser.add_argument("-r", "--render",
+                        action="store_true", help="Show the game window.")
+    parser.add_argument("-e", "--epochs",
+                        type=int, default=100,
+                        help="Number of epochs for training (default: 100).")
+    parser.add_argument("-s", "--save",
+                        type=str, default="session",
+                        help="Save the training session.")
+    parser.add_argument("-l", "--load",
+                        type=str, help="Load a training session.")
+    parser.add_argument("-g", "--graph",
+                        action="store_true", help="Show training graphs.")
+    parser.add_argument("-sg", "--save_graph",
+                        type=str, help="Save training graphs.")
+    parser.add_argument("-ns", "--no_state",
+                        action="store_true",
+                        help="Do not show the detailed information.")
+    parser.add_argument("-nl", "--no_learn",
+                        action="store_true", help="Disable learning.")
+    # TODO: Change speed of the game
+    # TODO: Step-by-step mode
 
 
 def main():
@@ -80,7 +92,9 @@ def main():
                             name = args.save_graph + ".png"
                             plt.savefig(name)
                     print("episode: {}/{}, score: {}, size: {},"
-                        " e: {:.2}".format(epoch+1, epochs, reward_per_epoch, len(env.snake), agent.epsilon))
+                          " e: {:.2}".format(epoch+1, epochs,
+                                             reward_per_epoch,
+                                             len(env.snake), agent.epsilon))
         if args.save:
             filename = args.save + ".weights.h5"
             agent.save(filename)

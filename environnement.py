@@ -1,8 +1,6 @@
 import pygame
 import numpy as np
 import random
-from time import sleep
-import sys
 
 
 class Env:
@@ -23,7 +21,6 @@ class Env:
             self.draw_board()
         self.state = self.get_state()
         return self.state
-
 
     def set_snake(self):
         for s in self.snake:
@@ -69,7 +66,6 @@ class Env:
 
         self.set_snake()
 
-
     def good_character(self, n):
         if n == 0:
             return "0"
@@ -83,7 +79,6 @@ class Env:
             return "R"
         return "?"
 
-
     def print_state(self):
         x, y = self.snake[0]
         start_space = " " * (x + 1)
@@ -92,14 +87,14 @@ class Env:
         print(start_space + "W" + end_space, flush=True)
         for i in range(self.size):
             if i != y:
-                print(start_space + self.good_character(self.board[i][x]) + end_space, flush=True)
+                print(start_space + self.good_character(
+                    self.board[i][x]) + end_space, flush=True)
                 continue
             print("W", end="")
             for j in range(self.size):
                 print(self.good_character(self.board[i][j]), end="")
             print("W", flush=True)
         print(start_space + "W" + end_space, flush=True)
-
 
     def step(self, action):
         self.done = False
@@ -189,7 +184,6 @@ class Env:
         ], dtype=np.float32)
 
         return state
-
 
     def valid_cell(self, x, y):
         if x < 0 or x >= self.size or y < 0 or y >= self.size:

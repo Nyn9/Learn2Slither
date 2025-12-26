@@ -15,12 +15,19 @@ class Agent:
         self.memory = []
         self.model = self.init_neural_network()
 
+    def get_huber_loss_fn(**huber_loss_kwargs):
+
+        def custom_huber_loss(y_true, y_pred):
+            return tf.losses.huber_loss(y_true, y_pred, **huber_loss_kwargs)
+
+        return custom_huber_loss
+
     def init_neural_network(self):
         model = Sequential()
         model.add(Dense(24, input_dim=self.state_size, activation='relu'))
         model.add(Dense(24, activation='relu'))
         model.add(Dense(self.nb_actions, activation='linear'))
-        model.compile(loss='mse', optimizer=Adam(learning_rate=self.lr))
+        model.compile(loss=self.get_huber_loss_fn(delta=1.0), optimizer=Adam(learning_rate=self.lr))
         return model
 
     def remember(self, state, action, reward, next_state, done):
